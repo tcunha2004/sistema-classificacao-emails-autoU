@@ -1,7 +1,7 @@
 import json
 from openai import OpenAI
 
-_client = OpenAI()
+_client = OpenAI() #apikey
 
 def get_classificacao_resposta(text: str) -> dict:
     system = "Responda somente JSON válido e nada além disso."
