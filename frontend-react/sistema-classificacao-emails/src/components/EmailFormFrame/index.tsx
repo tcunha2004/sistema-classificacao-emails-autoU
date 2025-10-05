@@ -16,6 +16,8 @@ import { GoUpload } from "react-icons/go";
 import { useForm } from "react-hook-form";
 import { api } from "../../lib/axios.ts";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
+import { useState } from "react";
+import Modal from "../modal/Modal.tsx";
 GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`;
 
 interface FormProps {
@@ -24,7 +26,7 @@ interface FormProps {
 }
 
 export default function EmailFormFrame() {
-  const { handleSubmit, register, watch } = useForm();
+  const { handleSubmit, register, watch, reset } = useForm();
 
   const textoWatcher = watch("texto");
   const arquivoWatcher = watch("arquivo");
@@ -32,7 +34,20 @@ export default function EmailFormFrame() {
   const isArquivoUploaded =
     arquivoWatcher && arquivoWatcher.length && arquivoWatcher[0];
 
+  const [showModal, setShowModal] = useState<{
+    classificacao: string;
+    sugestao: string;
+  }>({
+    classificacao: "",
+    sugestao: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   async function handleFormSubmit(data: FormProps) {
+    if (submitting) return;
+    setSubmitting(true);
+    setErrorMsg(null);
     if (data.arquivo?.length) {
       const file = data.arquivo[0];
       let textContent = "";
@@ -62,25 +77,42 @@ export default function EmailFormFrame() {
 
       if (!textContent) {
         console.warn("Não foi possível extrair texto do arquivo enviado.");
-        return;
+        setErrorMsg("Não foi possível extrair texto do arquivo enviado.");
+      } else {
+        try {
+          const resp = await api.post("/classificar-texto", {
+            text: textContent,
+          });
+          setShowModal({
+            classificacao: resp.data.classificacao,
+            sugestao: resp.data.resposta,
+          });
+          reset();
+        } catch (err: any) {
+          const apiError =
+            err?.response?.data?.error ||
+            err?.message ||
+            "Falha ao classificar texto";
+          setErrorMsg(apiError);
+        }
       }
-
-      await api
-        .post("/classificar-texto", {
-          text: textContent,
-        })
-        .then((resp) => {
-          console.log(resp.data);
-        });
     } else if (data.texto) {
-      await api
-        .post("/classificar-texto", {
-          text: data.texto,
-        })
-        .then((resp) => {
-          console.log(resp.data);
+      try {
+        const resp = await api.post("/classificar-texto", { text: data.texto });
+        setShowModal({
+          classificacao: resp.data.classificacao,
+          sugestao: resp.data.resposta,
         });
+        reset();
+      } catch (err: any) {
+        const apiError =
+          err?.response?.data?.error ||
+          err?.message ||
+          "Falha ao classificar texto";
+        setErrorMsg(apiError);
+      }
     }
+    setSubmitting(false);
   }
 
   return (
@@ -138,13 +170,30 @@ export default function EmailFormFrame() {
           </div>
         )}
 
+        {errorMsg && (
+          <div role="alert" style={{ color: "#b91c1c", fontSize: 14 }}>
+            {errorMsg}
+          </div>
+        )}
         <SubmitButton
           type="submit"
-          disabled={!isTextoFilled && !isArquivoUploaded}
+          disabled={(!isTextoFilled && !isArquivoUploaded) || submitting}
         >
-          Enviar
+          {submitting ? "Enviando..." : "Enviar"}
         </SubmitButton>
       </Form>
+      {(showModal.classificacao || showModal.sugestao) && (
+        <Modal
+          categoria={showModal.classificacao}
+          sugestao={showModal.sugestao}
+          onClose={() =>
+            setShowModal({
+              classificacao: "",
+              sugestao: "",
+            })
+          }
+        />
+      )}
     </Frame>
   );
 }

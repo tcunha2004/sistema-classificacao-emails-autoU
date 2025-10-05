@@ -2,6 +2,9 @@
 
 import axios from "axios";
 
+// Prefer environment variable (Vite) and fallback to '/api' which nginx proxies to backend
+const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
+
 export const api = axios.create({
-  baseURL: "http://127.0.0.1:5000",
+  baseURL,
 });

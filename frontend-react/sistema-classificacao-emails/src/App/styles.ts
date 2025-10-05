@@ -26,5 +26,3 @@ export const ContentContainer = styled.div`
     border-radius: 24px;
   }
 `;
-
-export default {} as const;

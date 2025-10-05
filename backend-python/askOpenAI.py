@@ -1,7 +1,9 @@
 import json
+import os
 from openai import OpenAI
 
-_client = OpenAI() #apikey
+# Read API key from environment variable for security
+_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # apikey from env
 
 def get_classificacao_resposta(text: str) -> dict:
     system = "Responda somente JSON válido e nada além disso."

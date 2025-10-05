@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend-python
+      dockerfile: Dockerfile
+    container_name: email-classifier-backend
+    environment:
+      - FLASK_ENV=production
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PORT=5000
+    ports:
+      - "5001:5000"
+    networks:
+      - appnet
+
+  frontend:
+    build:
+      context: ./frontend-react/sistema-classificacao-emails
+      dockerfile: Dockerfile
+    container_name: email-classifier-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
